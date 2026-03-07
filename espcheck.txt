@@ -1,5 +1,5 @@
-const int pinRed = 12;
-const int pinBlue = 14;
+const int pinRed = 25;
+const int pinBlue = 26;
 const int pinGreen = 27;
 
 void setup() {
