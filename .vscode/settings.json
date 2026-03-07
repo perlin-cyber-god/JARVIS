@@ -19,5 +19,6 @@
         "/home/perli/ros2_ws/src/install/my_py_pkg/lib/python3.12/site-packages",
         "/home/perli/ros2_ws/src/install/my_robot_interfaces/lib/python3.12/site-packages",
         "/opt/ros/jazzy/lib/python3.12/site-packages"
-    ]
+    ],
+    "ros.distro": "jazzy"
 }
