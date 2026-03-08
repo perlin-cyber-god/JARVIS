@@ -1,0 +1,148 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <curl/curl.h>
+#include <cjson/cJSON.h>
+
+struct MemoryStruct {
+    char *memory;
+    size_t size;
+};
+
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+    char *ptr = realloc(mem->memory, mem->size + realsize + 1);
+    if(ptr == NULL) return 0; 
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+    return realsize;
+}
+
+// Function to execute bash and capture output
+void execute_system_command(const char *cmd, char *output_buffer, size_t buffer_size) {
+    printf("[SYSTEM] Intercepted Execution: %s\n", cmd);
+    FILE *pipe = popen(cmd, "r");
+    if (!pipe) {
+        snprintf(output_buffer, buffer_size, "Error: Failed to run command.");
+        return;
+    }
+    
+    output_buffer[0] = '\0'; // Clear buffer
+    char line[256];
+    while (fgets(line, sizeof(line), pipe) != NULL) {
+        // Prevent buffer overflow
+        if (strlen(output_buffer) + strlen(line) < buffer_size - 1) {
+            strcat(output_buffer, line);
+        }
+    }
+    pclose(pipe);
+    printf("[SYSTEM] Output Captured (%zu bytes)\n", strlen(output_buffer));
+}
+
+// Function to talk to Ollama
+void ask_ollama(const char *system_prompt, const char *user_prompt, char *ai_response_buffer) {
+    CURL *curl;
+    CURLcode res;
+    
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "model", "qwen2.5:0.5b");
+    cJSON_AddStringToObject(root, "system", system_prompt);
+    cJSON_AddStringToObject(root, "prompt", user_prompt);
+    cJSON_AddBoolToObject(root, "stream", 0); 
+
+    char *json_data = cJSON_PrintUnformatted(root);
+    struct MemoryStruct chunk;
+    chunk.memory = malloc(1);  
+    chunk.size = 0;    
+
+    curl = curl_easy_init();
+    if(curl) {
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:11434/api/generate");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+        res = curl_easy_perform(curl);
+        if(res == CURLE_OK) {
+            cJSON *json = cJSON_Parse(chunk.memory);
+            if (json != NULL) {
+                cJSON *response = cJSON_GetObjectItemCaseSensitive(json, "response");
+                if (cJSON_IsString(response) && (response->valuestring != NULL)) {
+                    strcpy(ai_response_buffer, response->valuestring);
+                }
+                cJSON_Delete(json);
+            }
+        }
+        curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
+    }
+    free(chunk.memory);
+    free(json_data);
+    cJSON_Delete(root);
+}
+
+int main(void) {
+    char user_input[512];
+    char ai_response[4096];
+    char bash_output[2048];
+    char secondary_prompt[4096];
+
+    // The master instruction set
+    const char *agent_rules = "You are Jarvis, a system assistant. If the user asks for system info (like time, date, memory, files), DO NOT guess. Output ONLY the Linux command needed to find the answer, wrapped perfectly in <CMD> and </CMD>. Example: <CMD> date </CMD>. If it is just a chat question, answer normally.";
+    const char *summary_rules = "You are Jarvis. Summarize the following raw terminal output naturally for the user. Do not read raw numbers if not needed, be conversational.";
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    printf("==========================================\n");
+    printf("   JARVIS AGENT PROTOCOL ONLINE\n");
+    printf("==========================================\n\n");
+
+    while(1) {
+        printf("Perlin> ");
+        if (fgets(user_input, sizeof(user_input), stdin) == NULL) break;
+        user_input[strcspn(user_input, "\n")] = 0;
+        if (strcmp(user_input, "exit") == 0) break;
+        if (strlen(user_input) == 0) continue;
+
+        // 1. Send initial request
+        ai_response[0] = '\0';
+        ask_ollama(agent_rules, user_input, ai_response);
+
+        // 2. Scan for the <CMD> tag
+        char *cmd_start = strstr(ai_response, "<CMD>");
+        char *cmd_end = strstr(ai_response, "</CMD>");
+
+        if (cmd_start && cmd_end) {
+            // Calculate command length and extract it
+            cmd_start += 5; // Move pointer past "<CMD>"
+            size_t cmd_len = cmd_end - cmd_start;
+            char extracted_cmd[256];
+            strncpy(extracted_cmd, cmd_start, cmd_len);
+            extracted_cmd[cmd_len] = '\0';
+
+            // Clean up any stray spaces AI might add
+            while(extracted_cmd[0] == ' ') memmove(extracted_cmd, extracted_cmd+1, strlen(extracted_cmd));
+
+            // 3. Execute the intercepted command
+            execute_system_command(extracted_cmd, bash_output, sizeof(bash_output));
+
+            // 4. Inject the result back into Ollama for a summary
+            snprintf(secondary_prompt, sizeof(secondary_prompt), "The user asked: '%s'. The system executed '%s' and returned:\n%s\nSummarize this for the user.", user_input, extracted_cmd, bash_output);
+            
+            ai_response[0] = '\0';
+            ask_ollama(summary_rules, secondary_prompt, ai_response);
+        }
+
+        // 5. Print final output
+        printf("JARVIS> %s\n\n", ai_response);
+    }
+
+    curl_global_cleanup();
+    return 0;
+}
+
