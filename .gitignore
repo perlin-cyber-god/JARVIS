@@ -1,34 +1,40 @@
-# VS Code
-.vscode/browse.vc.db
-.vscode/browse.vc.db-shm
-.vscode/browse.vc.db-wal
-.vscode/ipch/
-.vscode/*.db
-.vscode/*.db-*
-
-# Build artifacts
+# Compiled Object files
+*.slo
+*.lo
 *.o
-*.a
+*.obj
+
+# Compiled Dynamic libraries
 *.so
 *.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
 *.exe
 *.out
+*.app
+jarvis_brain
+telemetry_daemon
+agent_simulation
 
-# IDE
-.idea/
-*.swp
-*.swo
-*~
+# VS Code
+.vscode/
 
-# OS
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Dependencies
-node_modules/
-venv/
-.env
-
-# Temporary files
-*.tmp
-*.log
+# Cache
+__pycache__/
+*.cache
