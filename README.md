@@ -9,6 +9,8 @@ JARVIS is a modular AI assistant and robotic control system designed with a dist
   - `jarvis_brain.c`: Logic for command execution, API integration, and communication.
   - `telemetry_daemon.c`: Monitoring and data logging.
   - `agent_simulation.c`: Behavioral simulation environment.
+- **`src/hardware/`**: Hardware control scripts.
+  - `fan_control.py`: Python script for PWM fan control and RPM monitoring using `lgpio`.
 - **`src/face/`**: Firmware for the visual/interaction interface (ESP32-based).
 - **`config/`**: System configuration files.
 - **`docs/`**: Technical documentation and design notes.
@@ -18,6 +20,7 @@ JARVIS is a modular AI assistant and robotic control system designed with a dist
 ## 🚀 Key Features
 
 - **Distributed Control**: Brain (C) communicates with peripheral devices via UDP.
+- **Hardware Management**: Dynamic fan control based on CPU temperature with stall detection.
 - **System Integration**: Capabilities to execute shell commands and capture output.
 - **API Connectivity**: Integrated with `libcurl` and `cJSON` for web services.
 - **Telemetry**: Real-time monitoring of system states.
@@ -25,14 +28,16 @@ JARVIS is a modular AI assistant and robotic control system designed with a dist
 
 ## 🛠 Tech Stack
 
-- **Languages**: C, C++
-- **Libraries**: `libcurl`, `cJSON`, `socket` (Linux), `ESP32 Arduino`
+- **Languages**: C, C++, Python
+- **Libraries**: `libcurl`, `cJSON`, `socket` (Linux), `lgpio` (Python), `ESP32 Arduino`
 - **Configuration**: VS Code with C/C++ tools.
 
 ## 📦 Setup & Installation
 
 1. **Prerequisites**:
    - GCC/G++ for Linux.
+   - Python 3.x.
+   - `lgpio` library (e.g., `sudo apt install python3-lgpio`).
    - Arduino IDE or PlatformIO for ESP32.
    - `libcurl` and `cJSON` development headers.
 
