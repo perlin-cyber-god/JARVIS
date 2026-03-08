@@ -1,4 +1,4 @@
-# JARVIS - Just Another Rather Very Intelligent System
+# JARVIS - Just Another Rather Very COOL System
 
 JARVIS is a modular AI assistant and robotic control system designed with a distributed architecture, featuring a central "Brain" and peripheral components like a "Face" for interaction.
 
