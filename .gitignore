@@ -35,7 +35,16 @@ agent_simulation
 ehthumbs.db
 Thumbs.db
 
+# Kernel module build artifacts
+*.d
+*.mod
+*.mod.c
+*.ko
+*.o.cmd
+.*.o.d
+
 # Cache
 __pycache__/
 *.cache
 .vscode/
+
